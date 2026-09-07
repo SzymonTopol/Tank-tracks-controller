@@ -1,105 +1,220 @@
 #include <Arduino.h>
+#include <WiFi.h>
+#include <WebServer.h>
+#include <WiFiUdp.h>
+#include <ArduinoJson.h>
+#include <Preferences.h>
 
-#define IN1_PIN 27
-#define IN2_PIN 26
-#define IN3_PIN 25
-#define IN4_PIN 33
+#include "Config.h"
+#include "Protocol.h"
+#include "MotorDriver.h"
+#include "PID.h"
 
-void left_track_forward(bool is_forward);
+// Track power (-255 to 255) sent by controller
+int16_t expectedLeftTrackPower = 0;
+int16_t expectedRightTrackPower = 0;
 
-void right_track_forward(bool is_forward);
+int16_t currentLeftTrackPower = 0;
+int16_t currentRightTrackPower = 0;
 
-void left_track_stop();
-void right_track_stop();
-void all_track_stop(){
-  left_track_stop();
-  right_track_stop();
+unsigned long interval = 50;
+unsigned long refTime = 0;
+
+unsigned long lastCommandTime = 0;
+unsigned long lastCommandDeadline = 1000;
+
+WebServer server(80);
+WiFiUDP udp;
+
+Preferences preferences;
+
+MotorDriver chassis(ENA_PIN, IN1_PIN, IN2_PIN,
+                    ENB_PIN, IN3_PIN, IN4_PIN,
+                    ENA_CHANNEL, ENB_CHANNEL, FREQUENCY, RESOLUTION);
+
+void setPIDParameters(double k, double T_i, double T_d);
+
+String getPIDParameters();
+
+void setExpectedTrackPower(int16_t leftTrackPower, int16_t rightTrackPower)
+{
+  expectedLeftTrackPower = constrain(leftTrackPower, -255, 255);
+  expectedRightTrackPower = constrain(rightTrackPower, -255, 255);
 }
 
-int reference_time = 0;
-int stage = 0;
+void setupTankTelemetryPacket(TankTelemetry *packet);
 
-void setup() {
-  pinMode(IN1_PIN, OUTPUT);
-  pinMode(IN2_PIN, OUTPUT);
-  pinMode(IN3_PIN, OUTPUT);
-  pinMode(IN4_PIN, OUTPUT);
+PID *leftTrackController = new PID(0, 0, 0, 15, RESOLUTION);
+PID *rightTrackController = new PID(0, 0, 0, 15, RESOLUTION);
+
+void setup()
+{
+  chassis.begin();
+
+  Serial.begin(115200);
+
+  preferences.begin("pid_cfg", false);
+  double saved_k = preferences.getDouble("k", 0.05);
+  double saved_T_i = preferences.getDouble("T_i", 15);
+  double saved_T_d = preferences.getDouble("T_d", 0);
+
+  setPIDParameters(saved_k, saved_T_i, saved_T_d);
+
+  WiFi.softAP(AP_SSID, AP_PASS);
+  udp.begin(UDP_PORT);
+
+  server.on("/halt", HTTP_GET, []()
+            {
+    HALT();
+    server.send(200, "text/plain", "Tank Halted");
+    lastCommandTime = millis(); });
+
+  server.on("/PIDParamsChange", HTTP_GET, []()
+            {
+    if(server.hasArg("k") && server.hasArg("T_i") && server.hasArg("T_d")){
+      double k = server.arg("k").toDouble();
+      double T_i = server.arg("T_i").toDouble();
+      double T_d = server.arg("T_d").toDouble();
+
+      setPIDParameters(k,T_i,T_d);
+      server.send(200, "text/plain", "PID parameters changed");
+    }else{
+      server.send(400, "text/plain", "Missing arguments");
+    }
+    lastCommandTime = millis(); });
+
+  server.on("/PIDParamsGet", HTTP_GET, []()
+            {
+    String jsonString = getPIDParameters();
+    server.send(200, "application/json", jsonString);
+    lastCommandTime = millis(); });
+
+  server.begin();
+
+  HALT(); // safety precausion
 }
 
-void loop() {
+void loop()
+{
+  int packetSize = udp.parsePacket();
 
-  if (millis()-reference_time > 2000)
+  if (packetSize > 0)
   {
-    stage++;
-    reference_time += 2000;
-    if (stage > 5) stage = 0;
-    
+    uint8_t buffer[MAX_BUFFER_SIZE];
+    int len = udp.read(buffer, sizeof(buffer));
 
-    switch (stage){
-      case 0:
-        right_track_forward(true);
-        left_track_stop();
+    while (packetSize > 0)
+    {
+      len = udp.read(buffer, sizeof(buffer));
+      packetSize = udp.parsePacket();
+    }
+
+    if (len > 0)
+    {
+      uint8_t packetId = buffer[0];
+      switch (packetId)
+      {
+      case CMD_MOVE:
+        if (len == sizeof(ControllerCommand))
+        {
+
+          ControllerCommand *cmd = (ControllerCommand *)buffer;
+
+          setExpectedTrackPower(cmd->leftExpectedPower, cmd->rightExpectedPower);
+
+          lastCommandTime = millis();
+        }
         break;
-      case 1:
-        right_track_stop();
-        left_track_forward(true);
+
+      default:
+        Serial.println("Unknown UDP packet received");
         break;
-      case 2:
-        all_track_stop();
-        break;
-      case 3:
-        right_track_forward(true);
-        left_track_forward(true);
-        break;
-      case 4:
-        all_track_stop();
-        break;
-      case 5:
-        right_track_forward(false);
-        left_track_forward(false);
-        
+      }
     }
   }
-  
-  //2 sekundy lewy
 
-  //2 sekundy prawy
-  
-  //2 sekundy stopu
+  // API HTTP_GET calls
+  server.handleClient();
 
-  //2 sekundy razem do przodu
+  if (millis() - refTime >= interval)
+  {
+    refTime = millis();
 
-  //2 sekundy stopu
+    if (millis() - lastCommandTime > lastCommandDeadline)
+      HALT();
 
-  //2 sekundy razem do tyłu
-}
+    currentLeftTrackPower = constrain(leftTrackController->calculate_u(expectedLeftTrackPower - currentLeftTrackPower), -255, 255);
+    currentRightTrackPower = constrain(rightTrackController->calculate_u(expectedRightTrackPower - currentRightTrackPower), -255, 255);
 
-void left_track_forward(bool is_forward){
-  if(is_forward){
-    digitalWrite(IN1_PIN, HIGH);
-    digitalWrite(IN2_PIN, LOW);
-  }else{
-    digitalWrite(IN1_PIN, LOW);
-    digitalWrite(IN2_PIN, HIGH);
+    chassis.setSpeeds(currentLeftTrackPower, currentRightTrackPower);
+
+    TankTelemetry data;
+    setupTankTelemetryPacket(&data);
+    udp.beginPacket("192.168.4.255", UDP_PORT);
+    udp.write((uint8_t *)&data, sizeof(data));
+    udp.endPacket();
   }
 }
 
-void right_track_forward(bool is_forward){
-  if(is_forward){
-    digitalWrite(IN4_PIN, HIGH);
-    digitalWrite(IN3_PIN, LOW);
-  }else{
-    digitalWrite(IN4_PIN, LOW);
-    digitalWrite(IN3_PIN, HIGH);
-  }
+void HALT()
+{ // For Emergency stopping both tracks
+
+  chassis.halt();
+
+  expectedLeftTrackPower = 0;
+  expectedRightTrackPower = 0;
+  currentLeftTrackPower = 0;
+  currentRightTrackPower = 0;
+
+  leftTrackController->resetMemory();
+  rightTrackController->resetMemory();
 }
 
-void left_track_stop(){
-  digitalWrite(IN1_PIN,LOW);
-  digitalWrite(IN2_PIN,LOW);
+void setPIDParameters(double k, double T_i, double T_d)
+{
+  leftTrackController->setProportionalGain(k);
+  leftTrackController->setIntegralTime(T_i);
+  leftTrackController->setDerivitiveTime(T_d);
+
+  rightTrackController->setProportionalGain(k);
+  rightTrackController->setIntegralTime(T_i);
+  rightTrackController->setDerivitiveTime(T_d);
+
+  preferences.putDouble("k", k);
+  preferences.putDouble("T_i", T_i);
+  preferences.putDouble("T_d", T_d);
 }
 
-void right_track_stop(){
-  digitalWrite(IN4_PIN,LOW);
-  digitalWrite(IN3_PIN,LOW);
+String getPIDParameters()
+{
+  JsonDocument doc;
+
+  doc["left_track"]["k"] = leftTrackController->getProportionalGain();
+  doc["left_track"]["ti"] = leftTrackController->getIntegralTime();
+  doc["left_track"]["td"] = leftTrackController->getDerivitiveTime();
+
+  doc["right_track"]["k"] = rightTrackController->getProportionalGain();
+  doc["right_track"]["ti"] = rightTrackController->getIntegralTime();
+  doc["right_track"]["td"] = rightTrackController->getDerivitiveTime();
+
+  String parameters;
+  serializeJson(doc, parameters);
+
+  return parameters;
+}
+
+void setupTankTelemetryPacket(TankTelemetry *packet)
+{
+  packet->packetId = CMD_TELEMETRY;
+  packet->expectedLeft = expectedLeftTrackPower;
+  packet->expectedRight = expectedRightTrackPower;
+  packet->currentLeft = currentLeftTrackPower;
+  packet->currentRight = currentRightTrackPower;
+
+  packet->leftP = leftTrackController->getLastP();
+  packet->leftI = leftTrackController->getLastI();
+  packet->leftD = leftTrackController->getLastD();
+  packet->rightP = rightTrackController->getLastP();
+  packet->rightI = rightTrackController->getLastI();
+  packet->rightD = rightTrackController->getLastD();
 }
