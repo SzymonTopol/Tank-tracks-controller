@@ -1,5 +1,6 @@
 #pragma once
 
+#define AN_READ_PIN 34
 #define ENA_PIN 32
 #define IN1_PIN 27
 #define IN2_PIN 14
@@ -14,3 +15,7 @@
 #define MAX_BUFFER_SIZE 64
 #define AP_SSID "RC_Tank_Network"
 #define AP_PASS "RC_Tank_Network_Password"
+
+const float maxVoltage = 12.6;
+const float minVoltage = 9.0;
+const float voltageDividerRatio = 11.0; // R1 100kΩ, R2 10kΩ // voltage DividerRatio = R2/(R1+R2)

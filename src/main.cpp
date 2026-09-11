@@ -44,6 +44,14 @@ void setExpectedTrackPower(int16_t leftTrackPower, int16_t rightTrackPower)
 
 void setupTankTelemetryPacket(TankTelemetry *packet);
 
+float readBatteryPercentage()
+{
+  float batteryVoltage = ((float)analogReadMilliVolts(AN_READ_PIN) / 1000.0) * voltageDividerRatio;
+
+  float percentage = ((batteryVoltage - minVoltage)) / (maxVoltage - minVoltage) * 100.0;
+  return constrain(percentage, 0.0, 100.0);
+}
+
 PID *leftTrackController = new PID(0, 0, 0, 15, RESOLUTION);
 PID *rightTrackController = new PID(0, 0, 0, 15, RESOLUTION);
 
@@ -52,6 +60,8 @@ void setup()
   chassis.begin();
 
   Serial.begin(115200);
+
+  pinMode(AN_READ_PIN, INPUT);
 
   preferences.begin("pid_cfg", false);
   double saved_k = preferences.getDouble("k", 0.05);
@@ -217,4 +227,6 @@ void setupTankTelemetryPacket(TankTelemetry *packet)
   packet->rightP = rightTrackController->getLastP();
   packet->rightI = rightTrackController->getLastI();
   packet->rightD = rightTrackController->getLastD();
+
+  packet->batteryPercentage = readBatteryPercentage();
 }
