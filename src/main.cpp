@@ -44,6 +44,8 @@ void setExpectedTrackPower(int16_t leftTrackPower, int16_t rightTrackPower)
 
 void setupTankTelemetryPacket(TankTelemetry *packet);
 
+void HALT();
+
 float readBatteryPercentage()
 {
   float batteryVoltage = ((float)analogReadMilliVolts(AN_READ_PIN) / 1000.0) * voltageDividerRatio;

@@ -23,5 +23,5 @@ struct __attribute__((packed)) TankTelemetry
     double_t rightP;
     double_t rightI;
     double_t rightD;
-    float batteryPercentage
+    float batteryPercentage;
 };
