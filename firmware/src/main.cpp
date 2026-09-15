@@ -201,13 +201,9 @@ String getPIDParameters()
 {
   JsonDocument doc;
 
-  doc["left_track"]["k"] = leftTrackController->getProportionalGain();
-  doc["left_track"]["ti"] = leftTrackController->getIntegralTime();
-  doc["left_track"]["td"] = leftTrackController->getDerivitiveTime();
-
-  doc["right_track"]["k"] = rightTrackController->getProportionalGain();
-  doc["right_track"]["ti"] = rightTrackController->getIntegralTime();
-  doc["right_track"]["td"] = rightTrackController->getDerivitiveTime();
+  doc["k"] = leftTrackController->getProportionalGain();
+  doc["T_i"] = leftTrackController->getIntegralTime();
+  doc["T_d"] = leftTrackController->getDerivitiveTime();
 
   String parameters;
   serializeJson(doc, parameters);
