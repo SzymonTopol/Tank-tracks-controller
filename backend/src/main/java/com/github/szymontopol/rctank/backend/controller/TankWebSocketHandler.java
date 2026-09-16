@@ -1,5 +1,6 @@
 package com.github.szymontopol.rctank.backend.controller;
 
+import com.github.szymontopol.rctank.backend.network.TankInput;
 import com.github.szymontopol.rctank.backend.service.Esp32UdpService;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
