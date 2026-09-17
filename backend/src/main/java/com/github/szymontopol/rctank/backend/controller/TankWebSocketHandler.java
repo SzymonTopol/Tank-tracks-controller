@@ -27,6 +27,8 @@ public class TankWebSocketHandler extends TextWebSocketHandler {
     protected void handleTextMessage(org.springframework.web.socket.WebSocketSession session, org.springframework.web.socket.TextMessage message) throws Exception {
         TankInput tankInput = objectMapper.readValue(message.getPayload(), TankInput.class);
         esp32UdpService.sendMoveCommand(tankInput.left(), tankInput.right());
+
+//        System.out.println("Received message: " + message.getPayload());
     }
 
     @Override
