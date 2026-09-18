@@ -28,7 +28,7 @@ public class TankWebSocketHandler extends TextWebSocketHandler {
         TankInput tankInput = objectMapper.readValue(message.getPayload(), TankInput.class);
         esp32UdpService.sendMoveCommand(tankInput.left(), tankInput.right());
 
-//        System.out.println("Received message: " + message.getPayload());
+        System.out.println("Received message: " + message.getPayload());
     }
 
     @Override

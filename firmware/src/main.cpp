@@ -54,8 +54,8 @@ float readBatteryPercentage()
   return constrain(percentage, 0.0, 100.0);
 }
 
-PID *leftTrackController = new PID(0, 0, 0, 15, RESOLUTION);
-PID *rightTrackController = new PID(0, 0, 0, 15, RESOLUTION);
+PID *leftTrackController = new PID(0, 0, 0, 300, RESOLUTION);
+PID *rightTrackController = new PID(0, 0, 0, 300, RESOLUTION);
 
 void setup()
 {
@@ -113,13 +113,13 @@ void loop()
   if (packetSize > 0)
   {
     uint8_t buffer[MAX_BUFFER_SIZE];
-    int len = udp.read(buffer, sizeof(buffer));
+    int len = 0;
 
-    while (packetSize > 0)
+    do 
     {
       len = udp.read(buffer, sizeof(buffer));
       packetSize = udp.parsePacket();
-    }
+    } while (packetSize > 0);
 
     if (len > 0)
     {

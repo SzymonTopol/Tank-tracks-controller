@@ -30,7 +30,7 @@ public class Esp32UdpService {
         this.packetCodec = packetCodec;
 
         try{
-            this.socket = new DatagramSocket();
+            this.socket = new DatagramSocket(ESP32_PORT);
             this.esp32Address = InetAddress.getByName(ESP32_IP);
             LOGGER.info("UDP Socket initiated, targeting ESP32 at {}:{}", ESP32_IP, ESP32_PORT);
         } catch (Exception e) {
@@ -50,6 +50,7 @@ public class Esp32UdpService {
             byte[] payload = packetCodec.encodeMoveCommand(moveCommand);
             DatagramPacket packet = new DatagramPacket(payload, payload.length, esp32Address, ESP32_PORT);
             socket.send(packet);
+            System.out.println("Sending " + moveCommand.toString() + " to ESP32 at " + esp32Address.getHostAddress());
         } catch (Exception e) {
             LOGGER.error("Failed to send UDP packet", e);
         }
