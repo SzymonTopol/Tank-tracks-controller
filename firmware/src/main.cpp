@@ -54,8 +54,8 @@ float readBatteryPercentage()
   return constrain(percentage, 0.0, 100.0);
 }
 
-PID *leftTrackController = new PID(0, 0, 0, 300, RESOLUTION);
-PID *rightTrackController = new PID(0, 0, 0, 300, RESOLUTION);
+PID *leftTrackController = new PID(0, 0, 0, 2000, RESOLUTION);
+PID *rightTrackController = new PID(0, 0, 0, 2000, RESOLUTION);
 
 void setup()
 {

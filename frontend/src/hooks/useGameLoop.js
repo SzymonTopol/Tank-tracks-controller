@@ -10,33 +10,59 @@ export function useGameLoop() {
 
     const ws = useRef(null);
 
+    const [telemetry, setTelemetry] = useState(null);
+
+    const [isHaltedUI, setIsHaltedUI] = useState(false);
+    const isHalted = useRef(false);
+
+    const [pidParams, setPidParams] = useState({k:0, ti:0, td:0});
+
     const updateMotors = (left, right) => {
         motors.current = {left, right};
     }
 
-    useEffect(() => {
-        
-        ws.current = new WebSocket('ws://127.0.0.1:8080/ws/tank');
+    const toggleHalt = async () => {
+        isHalted.current = !isHalted.current
+        setIsHaltedUI(isHalted.current)
 
-        ws.current.onopen = () => console.log("Websocket connected");
-        ws.current.onclose = () => console.log("Websocket disconnected");
-        ws.current.onerror = (error) => console.error("Websocket error: ", error);
+        if(isHalted.current){
+            updateMotors(0,0);
+        }
 
-        return () => {
-            if(ws.current){
-                ws.current.close();
-            }
-        };
-    },[]);
+        try{
+            await fetch('http://127.0.0.1:8080/api/tank/halt', {
+                method: 'POST'
+            });
+            console.log("HALT triggered succesfully");
+        }catch(err){
+            console.error("Failed to trigger HALT - ", err);
+        }
+    }
+
+    const updatePidParams = async (newParams) => {
+        try{
+            await fetch('http://127.0.0.1:8080/api/tank/pid', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(newParams)
+            });
+            setPidParams(newParams);
+            console.log("PID parameters updated ", newParams);
+        }catch(err){
+            console.log("Failed to update PID - ", err);
+        }
+    }
 
     useEffect(() =>{
         const tick = (currentTime) => {
 
             if(currentTime > lastTxTime.current + INTERVAL){
                 lastTxTime.current += INTERVAL;
-                console.log("Interval joystic data: ", motors.current);
+                // console.log("Interval joystic data: ", motors.current);
 
-                if(ws.current && ws.current.readyState === WebSocket.OPEN){
+                if(!isHalted.current && ws.current && ws.current.readyState === WebSocket.OPEN){
                     const payload = JSON.stringify(motors.current);
                     ws.current.send(payload);
                 }
@@ -48,5 +74,43 @@ export function useGameLoop() {
         return () => cancelAnimationFrame(requestRef.current);
     }, []);
 
-    return {updateMotors};
+    useEffect(() => {
+        
+        ws.current = new WebSocket('ws://127.0.0.1:8080/ws/tank');
+
+        ws.current.onopen = () => console.log("Websocket connected");
+        ws.current.onclose = () => console.log("Websocket disconnected");
+        ws.current.onerror = (error) => console.error("Websocket error: ", error);
+
+        ws.current.onmessage = (event) => {
+            try{
+                const data = JSON.parse(event.data);
+                setTelemetry(data);
+            }catch(err){
+                console.error("Failed to parse telemetry - ", err);
+            }
+        }
+
+        return () => {
+            if(ws.current){
+                ws.current.close();
+            }
+        };
+    },[]);
+
+    useEffect(() => {
+        const fetchPidParams = async() => {
+            try{
+                const response = await fetch('http://127.0.0.1:8080/api/tank/pid');
+                const data = await response.json();
+                setPidParams(data);
+                console.log("Initial PID params fetched ", data);
+            }catch(err){
+                console.error("Failed to fetch initial PID params ", err);
+            }
+        }
+        fetchPidParams();
+    },[]);
+
+    return {updateMotors, telemetry, toggleHalt, isHaltedUI, pidParams, updatePidParams};
 }
