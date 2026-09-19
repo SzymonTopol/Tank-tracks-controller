@@ -1,7 +1,11 @@
 package com.github.szymontopol.rctank.backend.network;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public record PidConfig(
         double k,
-        double T_i,
-        double T_d
+        @JsonProperty("T_i") double T_i,
+        @JsonProperty("T_d") double T_d,
+        int clamp,
+        @JsonProperty("isHalt") boolean isHalt
 ) {}

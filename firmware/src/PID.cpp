@@ -39,7 +39,8 @@ double PID::calculate_u(double e_i)
     if (sum < 0)
         modifier *= -1;
 
-    return (int)((pow(abs(sum), 2)) / pow(2, resolution)) * modifier; //^2 then /RESOLUTION for the lower values in the begining (better wrampup)
+    // return (int)((pow(abs(sum), 2)) / pow(2, resolution)) * modifier; //^2 then /RESOLUTION for the lower values in the begining (better wrampup)
+    return sum; //for now the default return behaviour
 }
 void PID::resetMemory()
 {

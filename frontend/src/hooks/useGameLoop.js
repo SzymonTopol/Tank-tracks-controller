@@ -15,7 +15,7 @@ export function useGameLoop() {
     const [isHaltedUI, setIsHaltedUI] = useState(false);
     const isHalted = useRef(false);
 
-    const [pidParams, setPidParams] = useState({k:0, ti:0, td:0});
+    const [pidParams, setPidParams] = useState({k:0, T_i:0, T_d:0, clamp:0});
 
     const updateMotors = (left, right) => {
         motors.current = {left, right};
@@ -104,6 +104,9 @@ export function useGameLoop() {
                 const response = await fetch('http://127.0.0.1:8080/api/tank/pid');
                 const data = await response.json();
                 setPidParams(data);
+
+                isHalted.current = data.isHalt;
+                setIsHaltedUI(data.isHalt);
                 console.log("Initial PID params fetched ", data);
             }catch(err){
                 console.error("Failed to fetch initial PID params ", err);

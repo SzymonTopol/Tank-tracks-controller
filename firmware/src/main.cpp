@@ -32,7 +32,7 @@ MotorDriver chassis(ENA_PIN, IN1_PIN, IN2_PIN,
                     ENB_PIN, IN3_PIN, IN4_PIN,
                     ENA_CHANNEL, ENB_CHANNEL, FREQUENCY, RESOLUTION);
 
-void setPIDParameters(double k, double T_i, double T_d);
+void setPIDParameters(double k, double T_i, double T_d, int clamp);
 
 String getPIDParameters();
 
@@ -44,6 +44,7 @@ void setExpectedTrackPower(int16_t leftTrackPower, int16_t rightTrackPower)
 
 void setupTankTelemetryPacket(TankTelemetry *packet);
 
+bool isHalted = false;
 void HALT();
 
 float readBatteryPercentage()
@@ -54,8 +55,8 @@ float readBatteryPercentage()
   return constrain(percentage, 0.0, 100.0);
 }
 
-PID *leftTrackController = new PID(0, 0, 0, 2000, RESOLUTION);
-PID *rightTrackController = new PID(0, 0, 0, 2000, RESOLUTION);
+PID *leftTrackController = new PID(0, 0, 0, 0, RESOLUTION);
+PID *rightTrackController = new PID(0, 0, 0, 0, RESOLUTION);
 
 void setup()
 {
@@ -69,8 +70,9 @@ void setup()
   double saved_k = preferences.getDouble("k", 0.05);
   double saved_T_i = preferences.getDouble("T_i", 15);
   double saved_T_d = preferences.getDouble("T_d", 0);
+  double saved_clamp = preferences.getInt("clamp", 2000);
 
-  setPIDParameters(saved_k, saved_T_i, saved_T_d);
+  setPIDParameters(saved_k, saved_T_i, saved_T_d, saved_clamp);
 
   WiFi.softAP(AP_SSID, AP_PASS);
   udp.begin(UDP_PORT);
@@ -78,17 +80,19 @@ void setup()
   server.on("/halt", HTTP_GET, []()
             {
     HALT();
-    server.send(200, "text/plain", "Tank Halted");
+    isHalted = !isHalted;
+    server.send(200, "text/plain", "Halt Command Executed");
     lastCommandTime = millis(); });
 
   server.on("/PIDParamsChange", HTTP_GET, []()
             {
-    if(server.hasArg("k") && server.hasArg("T_i") && server.hasArg("T_d")){
+    if(server.hasArg("k") && server.hasArg("T_i") && server.hasArg("T_d") && server.hasArg("clamp")){
       double k = server.arg("k").toDouble();
       double T_i = server.arg("T_i").toDouble();
       double T_d = server.arg("T_d").toDouble();
+      int clamp = server.arg("clamp").toInt();
 
-      setPIDParameters(k,T_i,T_d);
+      setPIDParameters(k,T_i,T_d, clamp);
       server.send(200, "text/plain", "PID parameters changed");
     }else{
       server.send(400, "text/plain", "Missing arguments");
@@ -108,63 +112,66 @@ void setup()
 
 void loop()
 {
-  int packetSize = udp.parsePacket();
-
-  if (packetSize > 0)
+  if (!isHalted)
   {
-    uint8_t buffer[MAX_BUFFER_SIZE];
-    int len = 0;
+    int packetSize = udp.parsePacket();
 
-    do 
+    if (packetSize > 0)
     {
-      len = udp.read(buffer, sizeof(buffer));
-      packetSize = udp.parsePacket();
-    } while (packetSize > 0);
+      uint8_t buffer[MAX_BUFFER_SIZE];
+      int len = 0;
 
-    if (len > 0)
-    {
-      uint8_t packetId = buffer[0];
-      switch (packetId)
+      do
       {
-      case CMD_MOVE:
-        if (len == sizeof(ControllerCommand))
+        len = udp.read(buffer, sizeof(buffer));
+        packetSize = udp.parsePacket();
+      } while (packetSize > 0);
+
+      if (len > 0)
+      {
+        uint8_t packetId = buffer[0];
+        switch (packetId)
         {
+        case CMD_MOVE:
+          if (len == sizeof(ControllerCommand))
+          {
 
-          ControllerCommand *cmd = (ControllerCommand *)buffer;
+            ControllerCommand *cmd = (ControllerCommand *)buffer;
 
-          setExpectedTrackPower(cmd->leftExpectedPower, cmd->rightExpectedPower);
+            setExpectedTrackPower(cmd->leftExpectedPower, cmd->rightExpectedPower);
 
-          lastCommandTime = millis();
+            lastCommandTime = millis();
+          }
+          break;
+
+        default:
+          Serial.println("Unknown UDP packet received");
+          break;
         }
-        break;
-
-      default:
-        Serial.println("Unknown UDP packet received");
-        break;
       }
     }
-  }
 
-  // API HTTP_GET calls
-  server.handleClient();
+    // API HTTP_GET calls
+    server.handleClient();
 
-  if (millis() - refTime >= interval)
-  {
-    refTime = millis();
+    if (millis() - refTime >= interval)
+    {
+      refTime = millis();
 
-    if (millis() - lastCommandTime > lastCommandDeadline)
-      HALT();
+      if (millis() - lastCommandTime > lastCommandDeadline)
+        HALT();
 
-    currentLeftTrackPower = constrain(leftTrackController->calculate_u(expectedLeftTrackPower - currentLeftTrackPower), -255, 255);
-    currentRightTrackPower = constrain(rightTrackController->calculate_u(expectedRightTrackPower - currentRightTrackPower), -255, 255);
+      currentLeftTrackPower = constrain(leftTrackController->calculate_u(expectedLeftTrackPower - currentLeftTrackPower), -255, 255);
+      currentRightTrackPower = constrain(rightTrackController->calculate_u(expectedRightTrackPower - currentRightTrackPower), -255, 255);
 
-    chassis.setSpeeds(currentLeftTrackPower, currentRightTrackPower);
+      chassis.setSpeeds(currentLeftTrackPower, currentRightTrackPower);
 
-    TankTelemetry data;
-    setupTankTelemetryPacket(&data);
-    udp.beginPacket("192.168.4.255", UDP_PORT);
-    udp.write((uint8_t *)&data, sizeof(data));
-    udp.endPacket();
+      TankTelemetry data;
+      setupTankTelemetryPacket(&data);
+      udp.beginPacket("192.168.4.255", UDP_PORT);
+      udp.write((uint8_t *)&data, sizeof(data));
+      udp.endPacket();
+    }
   }
 }
 
@@ -182,19 +189,22 @@ void HALT()
   rightTrackController->resetMemory();
 }
 
-void setPIDParameters(double k, double T_i, double T_d)
+void setPIDParameters(double k, double T_i, double T_d, int clamp)
 {
   leftTrackController->setProportionalGain(k);
   leftTrackController->setIntegralTime(T_i);
   leftTrackController->setDerivitiveTime(T_d);
+  leftTrackController->setClamp(clamp);
 
   rightTrackController->setProportionalGain(k);
   rightTrackController->setIntegralTime(T_i);
   rightTrackController->setDerivitiveTime(T_d);
+  rightTrackController->setClamp(clamp);
 
   preferences.putDouble("k", k);
   preferences.putDouble("T_i", T_i);
   preferences.putDouble("T_d", T_d);
+  preferences.putInt("clamp", clamp);
 }
 
 String getPIDParameters()
@@ -204,6 +214,8 @@ String getPIDParameters()
   doc["k"] = leftTrackController->getProportionalGain();
   doc["T_i"] = leftTrackController->getIntegralTime();
   doc["T_d"] = leftTrackController->getDerivitiveTime();
+  doc["clamp"] = leftTrackController->getClamp();
+  doc["isHalt"] = isHalted;
 
   String parameters;
   serializeJson(doc, parameters);

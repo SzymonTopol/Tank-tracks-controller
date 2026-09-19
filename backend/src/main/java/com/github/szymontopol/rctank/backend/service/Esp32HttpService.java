@@ -37,7 +37,7 @@ public class Esp32HttpService {
 
     public void setPidParams(PidConfig pidConfig) {
         try{
-            restClient.get().uri(uriBuilder -> uriBuilder.path("/PIDParamsChange").queryParam("k", pidConfig.k()).queryParam("T_i", pidConfig.T_i()).queryParam("T_d", pidConfig.T_d()).build()).retrieve().toBodilessEntity();
+            restClient.get().uri(uriBuilder -> uriBuilder.path("/PIDParamsChange").queryParam("k", pidConfig.k()).queryParam("T_i", pidConfig.T_i()).queryParam("T_d", pidConfig.T_d()).queryParam("clamp", pidConfig.clamp()).build()).retrieve().toBodilessEntity();
         }catch(Exception e){
             LOGGER.error("setPidParams failed",e);
         }

@@ -25,7 +25,7 @@ function App() {
     updateMotors(0,0);
   }
 
-  const [localPid, setLocalPid] = useState({k:0,ti:0,td:0});
+  const [localPid, setLocalPid] = useState({k:0, T_i:0, T_d:0, clamp:0});
 
   useEffect(()=>{
     setLocalPid(pidParams);
@@ -34,8 +34,9 @@ function App() {
   const applyPid = () => {
     updatePidParams({
       k: Number(localPid.k),
-      ti: Number(localPid.ti),
-      td: Number(localPid.td)
+      T_i: Number(localPid.T_i),
+      T_d: Number(localPid.T_d),
+      clamp: Number(localPid.clamp)
     });
   }
 
@@ -98,8 +99,8 @@ function App() {
                   Ti: <input 
                         type="number" 
                         step="0.01" 
-                        value={localPid.ti} 
-                        onChange={(e) => setLocalPid({ ...localPid, ti: e.target.value })}
+                        value={localPid.T_i} 
+                        onChange={(e) => setLocalPid({ ...localPid, T_i: e.target.value })}
                         onBlur={applyPid}
                         onKeyDown={handleKeyDown}
                       />
@@ -108,8 +109,18 @@ function App() {
                   Td: <input 
                         type="number" 
                         step="0.01" 
-                        value={localPid.td} 
-                        onChange={(e) => setLocalPid({ ...localPid, td: e.target.value })}
+                        value={localPid.T_d} 
+                        onChange={(e) => setLocalPid({ ...localPid, T_d: e.target.value })}
+                        onBlur={applyPid}
+                        onKeyDown={handleKeyDown}
+                      />
+              </label>
+              <label>
+                  Clamp: <input 
+                        type="number" 
+                        step="1" 
+                        value={localPid.clamp} 
+                        onChange={(e) => setLocalPid({ ...localPid, clamp: e.target.value })}
                         onBlur={applyPid}
                         onKeyDown={handleKeyDown}
                       />

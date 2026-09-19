@@ -8,7 +8,7 @@ private:
     double T_d;      // derivitive time
     int prev_e = 0;  // previous error
     double eSum = 0; // sum of errors
-    double eSumMax;
+    double eSumMax; //maximum error sum (for clamping down too agressive behaviour)
     int resolution;
 
     double lastP = 0;
@@ -26,10 +26,12 @@ public:
     void setProportionalGain(double k_new) { k = k_new; }
     void setIntegralTime(double T_i_new) { T_i = T_i_new; }
     void setDerivitiveTime(double T_d_new) { T_d = T_d_new; }
+    void setClamp(int clamp) { eSumMax = clamp; }
 
     double getProportionalGain() { return k; }
     double getIntegralTime() { return T_i; }
     double getDerivitiveTime() { return T_d; }
+    int getClamp() { return eSumMax; }
 
     double getLastP() { return lastP; }
     double getLastI() { return lastI; }
