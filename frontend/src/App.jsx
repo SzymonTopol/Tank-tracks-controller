@@ -5,6 +5,15 @@ import { useEffect, useState } from 'react';
 const constraint = (val, min, max) => Math.round(Math.max(min, Math.min(max,val)));
 
 const RESOLUTION = 8;
+const MAX_POWER = Math.pow(2,RESOLUTION)-1;
+
+// returns left and right motor power values based on given x and y values on a cartesian plane (with borders from -1 to 1)
+const calculateDifferencialPower = (x,y) => {
+  let left = constraint((y+x)*MAX_POWER,-MAX_POWER,MAX_POWER);
+  let right= constraint((y-x)*MAX_POWER,-MAX_POWER,MAX_POWER);
+
+  return {left,right};
+}
 
 function App() {
 
@@ -14,8 +23,7 @@ function App() {
     console.log("Moved:", event);
     const{x,y} = event;
 
-    let left = constraint((y+x)*(Math.pow(2,RESOLUTION)-1),-(Math.pow(2,RESOLUTION)-1),Math.pow(2,RESOLUTION)-1);
-    let right= constraint((y-x)*(Math.pow(2,RESOLUTION)-1),-(Math.pow(2,RESOLUTION)-1),Math.pow(2,RESOLUTION)-1);
+    const {left, right} = calculateDifferencialPower(x,y);
 
     updateMotors(left,right);
   }
@@ -46,6 +54,36 @@ function App() {
       e.target.blur();
     }
   };
+
+  useEffect(() => {
+    const keys = { w: false, a:false, s:false, d:false};
+
+    const handleKeyEvent = (e, isPressed) => {
+      const key = e.key.toLowerCase();
+
+      if(!keys.hasOwnProperty(key)) return;
+
+      keys[key] = isPressed;
+
+      const y = (keys.w ? 1 : 0) - (keys.s ? 1:0);
+      const x = (keys.d ? 1 : 0) - (keys.a ? 1:0);
+
+      const {left, right} = calculateDifferencialPower(x,y);
+
+      updateMotors(left,right);
+    };
+
+    const handleKeyDown = (e) => handleKeyEvent(e, true);
+    const handleKeyUp = (e) => handleKeyEvent(e, false);
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [updateMotors]);
 
   return (
     <>
