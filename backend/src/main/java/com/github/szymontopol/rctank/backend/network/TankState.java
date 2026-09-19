@@ -2,7 +2,7 @@ package com.github.szymontopol.rctank.backend.network;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public record PidConfig(
+public record TankState(
         double k,
         @JsonProperty("T_i") double T_i,
         @JsonProperty("T_d") double T_d,

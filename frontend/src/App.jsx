@@ -8,7 +8,7 @@ const RESOLUTION = 8;
 
 function App() {
 
-  const { updateMotors, telemetry, toggleHalt, isHaltedUI, pidParams, updatePidParams } = useGameLoop();
+  const { updateMotors, telemetry, toggleHalt, isHaltedUI, tankState, updatePidParams } = useGameLoop();
 
   const handleMove = (event) => {
     console.log("Moved:", event);
@@ -28,8 +28,8 @@ function App() {
   const [localPid, setLocalPid] = useState({k:0, T_i:0, T_d:0, clamp:0});
 
   useEffect(()=>{
-    setLocalPid(pidParams);
-  },[pidParams]);
+    setLocalPid(tankState);
+  },[tankState]);
 
   const applyPid = () => {
     updatePidParams({

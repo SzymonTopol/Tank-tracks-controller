@@ -15,7 +15,7 @@ export function useGameLoop() {
     const [isHaltedUI, setIsHaltedUI] = useState(false);
     const isHalted = useRef(false);
 
-    const [pidParams, setPidParams] = useState({k:0, T_i:0, T_d:0, clamp:0});
+    const [tankState, setTankState] = useState({k:0, T_i:0, T_d:0, clamp:0});
 
     const updateMotors = (left, right) => {
         motors.current = {left, right};
@@ -48,7 +48,7 @@ export function useGameLoop() {
                 },
                 body: JSON.stringify(newParams)
             });
-            setPidParams(newParams);
+            setTankState(newParams);
             console.log("PID parameters updated ", newParams);
         }catch(err){
             console.log("Failed to update PID - ", err);
@@ -99,21 +99,21 @@ export function useGameLoop() {
     },[]);
 
     useEffect(() => {
-        const fetchPidParams = async() => {
+        const fetchTankState = async() => {
             try{
-                const response = await fetch('http://127.0.0.1:8080/api/tank/pid');
+                const response = await fetch('http://127.0.0.1:8080/api/tank/state');
                 const data = await response.json();
-                setPidParams(data);
+                setTankState(data);
 
                 isHalted.current = data.isHalt;
                 setIsHaltedUI(data.isHalt);
-                console.log("Initial PID params fetched ", data);
+                console.log("Initial Tank state fetched ", data);
             }catch(err){
-                console.error("Failed to fetch initial PID params ", err);
+                console.error("Failed to fetch initial Tank State ", err);
             }
         }
-        fetchPidParams();
+        fetchTankState();
     },[]);
 
-    return {updateMotors, telemetry, toggleHalt, isHaltedUI, pidParams, updatePidParams};
+    return {updateMotors, telemetry, toggleHalt, isHaltedUI, tankState, updatePidParams};
 }

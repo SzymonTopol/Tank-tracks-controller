@@ -1,6 +1,6 @@
 package com.github.szymontopol.rctank.backend.controller;
 
-import com.github.szymontopol.rctank.backend.network.PidConfig;
+import com.github.szymontopol.rctank.backend.network.TankState;
 import com.github.szymontopol.rctank.backend.service.Esp32HttpService;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,13 +19,13 @@ public class TankConfigController {
         esp32HttpService.halt();
     }
 
-    @GetMapping("/pid")
-    public PidConfig getPidConfig(){
-        return esp32HttpService.getPidParams();
+    @GetMapping("/state")
+    public TankState getTankState(){
+        return esp32HttpService.getTankState();
     }
 
     @PostMapping("/pid")
-    public void setPidConfig(@RequestBody PidConfig pidConfig){
+    public void setPidConfig(@RequestBody TankState pidConfig){
         esp32HttpService.setPidParams(pidConfig);
     }
 

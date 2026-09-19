@@ -34,7 +34,7 @@ MotorDriver chassis(ENA_PIN, IN1_PIN, IN2_PIN,
 
 void setPIDParameters(double k, double T_i, double T_d, int clamp);
 
-String getPIDParameters();
+String getTankState();
 
 void setExpectedTrackPower(int16_t leftTrackPower, int16_t rightTrackPower)
 {
@@ -99,9 +99,9 @@ void setup()
     }
     lastCommandTime = millis(); });
 
-  server.on("/PIDParamsGet", HTTP_GET, []()
+  server.on("/tankState", HTTP_GET, []()
             {
-    String jsonString = getPIDParameters();
+    String jsonString = getTankState();
     server.send(200, "application/json", jsonString);
     lastCommandTime = millis(); });
 
@@ -112,66 +112,63 @@ void setup()
 
 void loop()
 {
-  if (!isHalted)
+  int packetSize = udp.parsePacket();
+
+  if (packetSize > 0)
   {
-    int packetSize = udp.parsePacket();
+    uint8_t buffer[MAX_BUFFER_SIZE];
+    int len = 0;
 
-    if (packetSize > 0)
+    do
     {
-      uint8_t buffer[MAX_BUFFER_SIZE];
-      int len = 0;
+      len = udp.read(buffer, sizeof(buffer));
+      packetSize = udp.parsePacket();
+    } while (packetSize > 0);
 
-      do
+    if (len > 0)
+    {
+      uint8_t packetId = buffer[0];
+      switch (packetId)
       {
-        len = udp.read(buffer, sizeof(buffer));
-        packetSize = udp.parsePacket();
-      } while (packetSize > 0);
-
-      if (len > 0)
-      {
-        uint8_t packetId = buffer[0];
-        switch (packetId)
+      case CMD_MOVE:
+        if (len == sizeof(ControllerCommand))
         {
-        case CMD_MOVE:
-          if (len == sizeof(ControllerCommand))
-          {
 
-            ControllerCommand *cmd = (ControllerCommand *)buffer;
+          ControllerCommand *cmd = (ControllerCommand *)buffer;
 
-            setExpectedTrackPower(cmd->leftExpectedPower, cmd->rightExpectedPower);
+          setExpectedTrackPower(cmd->leftExpectedPower, cmd->rightExpectedPower);
 
-            lastCommandTime = millis();
-          }
-          break;
-
-        default:
-          Serial.println("Unknown UDP packet received");
-          break;
+          lastCommandTime = millis();
         }
+        break;
+
+      default:
+        Serial.println("Unknown UDP packet received");
+        break;
       }
     }
+  }
 
-    // API HTTP_GET calls
-    server.handleClient();
+  // API HTTP_GET calls
+  server.handleClient();
 
-    if (millis() - refTime >= interval)
-    {
-      refTime = millis();
+  if (!isHalted && millis() - refTime >= interval)
+  {
+    refTime = millis();
 
-      if (millis() - lastCommandTime > lastCommandDeadline)
-        HALT();
+    if (millis() - lastCommandTime > lastCommandDeadline)
+      HALT();
 
-      currentLeftTrackPower = constrain(leftTrackController->calculate_u(expectedLeftTrackPower - currentLeftTrackPower), -255, 255);
-      currentRightTrackPower = constrain(rightTrackController->calculate_u(expectedRightTrackPower - currentRightTrackPower), -255, 255);
+    currentLeftTrackPower = constrain(leftTrackController->calculate_u(expectedLeftTrackPower - currentLeftTrackPower), -255, 255);
+    currentRightTrackPower = constrain(rightTrackController->calculate_u(expectedRightTrackPower - currentRightTrackPower), -255, 255);
 
-      chassis.setSpeeds(currentLeftTrackPower, currentRightTrackPower);
+    chassis.setSpeeds(currentLeftTrackPower, currentRightTrackPower);
 
-      TankTelemetry data;
-      setupTankTelemetryPacket(&data);
-      udp.beginPacket("192.168.4.255", UDP_PORT);
-      udp.write((uint8_t *)&data, sizeof(data));
-      udp.endPacket();
-    }
+    TankTelemetry data;
+    setupTankTelemetryPacket(&data);
+    udp.beginPacket("192.168.4.255", UDP_PORT);
+    udp.write((uint8_t *)&data, sizeof(data));
+    udp.endPacket();
   }
 }
 
@@ -207,7 +204,7 @@ void setPIDParameters(double k, double T_i, double T_d, int clamp)
   preferences.putInt("clamp", clamp);
 }
 
-String getPIDParameters()
+String getTankState()
 {
   JsonDocument doc;
 

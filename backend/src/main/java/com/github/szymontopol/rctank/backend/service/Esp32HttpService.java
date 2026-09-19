@@ -1,6 +1,6 @@
 package com.github.szymontopol.rctank.backend.service;
 
-import com.github.szymontopol.rctank.backend.network.PidConfig;
+import com.github.szymontopol.rctank.backend.network.TankState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -26,16 +26,16 @@ public class Esp32HttpService {
 
     }
 
-    public PidConfig getPidParams() {
+    public TankState getTankState() {
         try{
-            return restClient.get().uri("/PIDParamsGet").retrieve().body(PidConfig.class);
+            return restClient.get().uri("/tankState").retrieve().body(TankState.class);
         }catch(Exception e){
-            LOGGER.error("getPidParams failed",e);
+            LOGGER.error("getTankState failed",e);
         }
         return null;
     }
 
-    public void setPidParams(PidConfig pidConfig) {
+    public void setPidParams(TankState pidConfig) {
         try{
             restClient.get().uri(uriBuilder -> uriBuilder.path("/PIDParamsChange").queryParam("k", pidConfig.k()).queryParam("T_i", pidConfig.T_i()).queryParam("T_d", pidConfig.T_d()).queryParam("clamp", pidConfig.clamp()).build()).retrieve().toBodilessEntity();
         }catch(Exception e){
