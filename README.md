@@ -19,7 +19,7 @@ To balance speed and reliability, the system isolates data streams by urgency:
 
 ## 🔌 Hardware & Circuit Diagram
 
-![Circuit Diagram](firmware/Circuit diagram.png)
+![Circuit Diagram](firmware/Circuit%20diagram.png)
 
 The physical build relies on standard, reliable maker components wired for safety and logic isolation:
 
