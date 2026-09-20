@@ -14,6 +14,7 @@ export function useGameLoop() {
     const lastDpadState = useRef({up: false, down: false});
 
     const [telemetry, setTelemetry] = useState(null);
+    const [telemetryHistory, setTelemetryHistory] = useState([])
 
     const [isHaltedUI, setIsHaltedUI] = useState(false);
     const isHalted = useRef(false);
@@ -23,6 +24,9 @@ export function useGameLoop() {
     const RESOLUTION = 8;
     const MAX_POWER = Math.pow(2, RESOLUTION) - 1;
     const constraint = (val, min, max) => Math.round(Math.max(min, Math.min(max, val)));
+
+    const smoothedBattery = useRef(null)
+    const ALPHA = 0.05;
 
     const calculateDifferentialPower = (x, y) => {
         const left = constraint((y + x) * MAX_POWER, -MAX_POWER, MAX_POWER);
@@ -150,7 +154,21 @@ export function useGameLoop() {
         ws.current.onmessage = (event) => {
             try{
                 const data = JSON.parse(event.data);
+
+                const rawBat = data.batteryPercentage;
+
+                if(smoothedBattery === null){
+                    smoothedBattery.current = rawBat;
+                }else{
+                    smoothedBattery.current = (ALPHA*rawBat) + ((1-ALPHA)*smoothedBattery.current);
+                }
+
+                data.cleanBattery = smoothedBattery.current.toFixed(1);
+
                 setTelemetry(data);
+
+                //that -60 should be a declared variable to avoid magic numbers
+                setTelemetryHistory(prev => [...prev, data].slice(-60));
             }catch(err){
                 console.error("Failed to parse telemetry - ", err);
             }
@@ -180,5 +198,5 @@ export function useGameLoop() {
         fetchTankState();
     },[]);
 
-    return {updateMotors, telemetry, toggleHalt, isHaltedUI, tankState, updatePidParams};
+    return {updateMotors, telemetry, telemetryHistory, toggleHalt, isHaltedUI, tankState, updatePidParams};
 }

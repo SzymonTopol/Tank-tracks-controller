@@ -1,6 +1,7 @@
 import { Joystick } from 'react-joystick-component'
 import { useGameLoop } from './hooks/useGameLoop';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useDeferredValue } from 'react';
+import { TelemetryCharts } from './TelemetryCharts';
 
 const constraint = (val, min, max) => Math.round(Math.max(min, Math.min(max,val)));
 
@@ -17,7 +18,9 @@ const calculateDifferencialPower = (x,y) => {
 
 function App() {
 
-  const { updateMotors, telemetry, toggleHalt, isHaltedUI, tankState, updatePidParams } = useGameLoop();
+  const { updateMotors, telemetry, telemetryHistory ,toggleHalt, isHaltedUI, tankState, updatePidParams } = useGameLoop();
+
+ const deferredHistory = useDeferredValue(telemetryHistory);
 
   const handleMove = (event) => {
     console.log("Moved:", event);
@@ -87,12 +90,29 @@ function App() {
 
   return (
     <>
-      <div>TankUI</div>
-
-      <div style={{ padding: '20px', fontFamily: 'monospace', background: '#f0f0f0', marginBottom: '20px' }}>
-        <strong> Telemetry: </strong>
-        <pre>{JSON.stringify(telemetry,null,2)}</pre>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+      <h1 style={{ margin: 0 }}>TankUI</h1>
+    
+      <div style={{ 
+        padding: '10px 20px', 
+        background: '#222', 
+        color: (telemetry?.cleanBattery > 20) ? '#0f0' : '#f00', 
+        fontFamily: 'monospace', 
+        fontSize: '24px', 
+        fontWeight: 'bold',
+        borderRadius: '8px',
+        border: '2px solid #444'
+        }}>
+          BATTERY: {telemetry ? telemetry.cleanBattery : '--.-'}%
       </div>
+    </div>
+
+      <div style={{ padding: '20px', background: '#f0f0f0', marginBottom: '20px', borderRadius: '8px' }}>
+        <h3 style={{ marginTop: 0 }}>Telemetry History</h3>
+        {/* 3. Pass the deferred array instead of the raw array */}
+        {deferredHistory.length > 0 && <TelemetryCharts data={deferredHistory} />}
+      </div>
+
 
       <Joystick
       size={100}
