@@ -44,7 +44,7 @@ void MotorDriver::setSpeeds(int16_t leftSpeed, int16_t rightSpeed)
         digitalWrite(pinIn3, HIGH);
         digitalWrite(pinIn4, LOW);
     }
-    ledcWrite(channelEnb, abs(leftSpeed));
+    ledcWrite(channelEnb, std::abs(leftSpeed));
 
     if (rightSpeed == 0)
     {
@@ -61,7 +61,7 @@ void MotorDriver::setSpeeds(int16_t leftSpeed, int16_t rightSpeed)
         digitalWrite(pinIn1, HIGH);
         digitalWrite(pinIn2, LOW);
     }
-    ledcWrite(channelEna, abs(rightSpeed));
+    ledcWrite(channelEna, std::abs(rightSpeed));
 }
 
 void MotorDriver::halt()

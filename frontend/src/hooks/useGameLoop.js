@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useGamepad } from './useGamepad';
-import { CONTROL_SOURCES, INTERVAL, ALPHA } from '../constants';
+import { CONTROL_SOURCES, INTERVAL, ALPHA, DRIVE_MODES } from '../constants';
 
 export function useGameLoop() {
     const lastTxTime = useRef(0);
@@ -64,8 +64,22 @@ export function useGameLoop() {
         const tick = (currentTime) => {
             const padData = pollGamepad();
             
-            if (padData?.isPadActive) {
-                updateMotors(padData.left, padData.right, CONTROL_SOURCES.GAMEPAD);
+            if (padData) {
+                if (padData.isPadActive) {
+                    const modeMap = {
+                        [DRIVE_MODES.NFS]: CONTROL_SOURCES.GAMEPAD_NFS,
+                        [DRIVE_MODES.TANK]: CONTROL_SOURCES.GAMEPAD_TANK
+                    };
+                    const padSource = modeMap[padData.activeDriveMode] || CONTROL_SOURCES.GAMEPAD_NFS;
+                    
+                    updateMotors(padData.left, padData.right, padSource);
+                    
+                } else if (
+                    activeDevice.current === CONTROL_SOURCES.GAMEPAD_NFS || 
+                    activeDevice.current === CONTROL_SOURCES.GAMEPAD_TANK
+                ) {
+                    updateMotors(0, 0, activeDevice.current);
+                }
             }
 
             if (currentTime > lastTxTime.current + INTERVAL) {

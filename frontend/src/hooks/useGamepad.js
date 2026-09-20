@@ -66,7 +66,8 @@ export function useGamepad() {
         return {
             left: clamp(leftBase * MAX_POWER, -MAX_POWER, MAX_POWER),
             right: clamp(rightBase * MAX_POWER, -MAX_POWER, MAX_POWER),
-            isPadActive
+            isPadActive,
+            activeDriveMode: driveMode.current
         };
     }, []);
 

@@ -35,11 +35,7 @@ double PID::calculate_u(double e_i)
     lastI = I(e_i);
     lastD = D(e_i);
     int sum = lastP + lastI + lastD;
-    int modifier = 1;
-    if (sum < 0)
-        modifier *= -1;
-
-    // return (int)((pow(abs(sum), 2)) / pow(2, resolution)) * modifier; //^2 then /RESOLUTION for the lower values in the begining (better wrampup)
+    
     return sum; //for now the default return behaviour
 }
 void PID::resetMemory()

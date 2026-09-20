@@ -16,7 +16,7 @@ import org.slf4j.LoggerFactory;
 @Service
 public class Esp32UdpService {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(Esp32UdpService.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(Esp32UdpService.class);
 
     private final PacketCodec packetCodec;
     private DatagramSocket socket;
@@ -26,7 +26,7 @@ public class Esp32UdpService {
     private static final int ESP32_PORT = 4210;
     private static final String ESP32_IP = "192.168.4.1";
 
-    Esp32UdpService(PacketCodec packetCodec) {
+    public Esp32UdpService(PacketCodec packetCodec) {
         this.packetCodec = packetCodec;
 
         try{
@@ -41,7 +41,6 @@ public class Esp32UdpService {
     }
 
     public void sendMoveCommand(short leftPower, short rightPower) {
-        // from -255 to 255
         leftPower = (short) Math.max(-255, Math.min(255, leftPower));
         rightPower = (short) Math.max(-255, Math.min(255, rightPower));
         MoveCommand moveCommand = new MoveCommand(PacketCodec.CMD_MOVE, leftPower, rightPower);
@@ -50,7 +49,8 @@ public class Esp32UdpService {
             byte[] payload = packetCodec.encodeMoveCommand(moveCommand);
             DatagramPacket packet = new DatagramPacket(payload, payload.length, esp32Address, ESP32_PORT);
             socket.send(packet);
-            System.out.println("Sending " + moveCommand.toString() + " to ESP32 at " + esp32Address.getHostAddress());
+
+            LOGGER.trace("Sending {} to ESP32 at {}", moveCommand, esp32Address.getHostAddress());
         } catch (Exception e) {
             LOGGER.error("Failed to send UDP packet", e);
         }
@@ -71,7 +71,6 @@ public class Esp32UdpService {
                 } catch (Exception e) {
                     LOGGER.error("Failed to receive UDP packet", e);
                 }
-
             }
         });
         listeningThread.setDaemon(true);

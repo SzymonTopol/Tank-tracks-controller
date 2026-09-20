@@ -11,7 +11,8 @@ export const DRIVE_MODES = {
 
 export const CONTROL_SOURCES = {
     WSAD: 'WSAD',
-    GAMEPAD: 'Gamepad',
+    GAMEPAD_NFS: 'Gamepad (NFS)',
+    GAMEPAD_TANK: 'Gamepad (Tank)',
     JOYSTICK: 'Joystick'
 };
 

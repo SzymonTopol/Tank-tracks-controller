@@ -7,7 +7,7 @@ export const calculateDifferentialPower = (x, y) => { //Calculating power to eac
     const safeY = Number.isFinite(y) ? y : 0;
 
     const cleanX = clamp(safeX, -1.0, 1.0);
-    const cleanY = clamp(cleanY, -1.0, 1.0);
+    const cleanY = clamp(safeY, -1.0, 1.0);
 
     const left = clamp((cleanY + cleanX) * MAX_POWER, -MAX_POWER, MAX_POWER);
     const right = clamp((cleanY - cleanX) * MAX_POWER, -MAX_POWER, MAX_POWER);
