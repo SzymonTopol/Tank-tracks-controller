@@ -15,7 +15,7 @@ The repository is divided into three distinct layers, each handling a specific d
 To balance speed and reliability, the system isolates data streams by urgency:
 
 * **UDP (High-Frequency Control & Telemetry):** Motor commands from the frontend and 50Hz telemetry updates from the tank are packed into custom, tightly packed byte arrays (`PacketCodec`). Despite the focus on speed, payloads undergo strict size and packet ID validation on both ends before execution to discard corrupted data. UDP ensures the tank reacts instantly to inputs and never chokes on outdated telemetry if packets drop.
-* **HTTP REST (Configuration & State):** Critical, low-frequency operations—like updating PID tuning parameters or triggering an emergency halt—use standard HTTP GET/POST endpoints. This guarantees delivery and allows the ESP32 to validate the configuration before applying it.
+* **HTTP REST (Configuration & State):** Critical, low-frequency operations-like updating PID tuning parameters or triggering an emergency halt-use standard HTTP GET/POST endpoints. This guarantees delivery and allows the ESP32 to validate the configuration before applying it.
 
 ## 🔌 Hardware & Circuit Diagram
 
@@ -108,5 +108,5 @@ The frontend dynamically switches between input methods based on physical intera
 
 ### Automated & Manual Safety Overrides
 
-* **Emergency Halt:** A dedicated HALT button in the UI immediately zero-outs the PID memory and cuts motor power. This state is authoritative and maintained on the ESP32—meaning the tank stays safely locked down even if the frontend client disconnects or refreshes.
+* **Emergency Halt:** A dedicated HALT button in the UI immediately zero-outs the PID memory and cuts motor power. This state is authoritative and maintained on the ESP32-meaning the tank stays safely locked down even if the frontend client disconnects or refreshes.
 * **Dead-Man Switch:** The ESP32 firmware includes a watchdog deadline timer. If the microcontroller stops receiving valid UDP movement commands within a specified time threshold (e.g., the controller disconnects or the Java backend crashes), the tank will automatically trigger a self-halt to prevent a runaway vehicle.
