@@ -1,0 +1,207 @@
+/* Global Reset to fix the white outline */
+body {
+    margin: 0;
+    padding: 0;
+    background-color: #0f0f13;
+    color: #ffffff;
+    font-family: system-ui, -apple-system, sans-serif;
+}
+
+.app-container {
+    min-height: 100vh;
+    padding: 20px 4% 10vh 4%; 
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 
+  DASHBOARD GRID
+  Stretches to fill the space. Uses 4% gaps.
+*/
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr minmax(350px, 450px) 1fr;
+    gap: 4%; 
+    width: 100%;
+    flex: 1; 
+}
+
+/* Columns */
+.column-side {
+    display: flex;
+    flex-direction: column;
+}
+
+.side-bottom-content {
+    display: flex;
+    flex-direction: column;
+    gap: 5vh;
+    margin-top: auto; 
+}
+
+.column-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 30px;
+    padding-top: 20px;
+}
+
+.center-bottom-content {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 100%;
+    margin-top: auto; 
+}
+
+/* Typography */
+.app-title {
+    margin: 0;
+    font-size: 32px;
+    color: #888;
+}
+.app-title span { color: #fff; }
+.status-text { color: #666; margin-top: 20px; }
+
+/* Reusable Panels */
+.panel {
+    background: #1e1e24;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    border: 1px solid #333;
+    width: 100%;
+    box-sizing: border-box;
+}
+.panel-padded {
+    padding: 25px;
+}
+
+/* Center Controls */
+.mode-indicator {
+    width: 280px; 
+    text-align: center;
+    padding: 10px 0;
+    background: #1e1e24;
+    border: 2px solid #007bff;
+    color: #007bff;
+    font-weight: bold;
+    border-radius: 30px;
+    font-size: 16px;
+    text-transform: uppercase;
+    box-shadow: 0 0 10px rgba(0, 123, 255, 0.2);
+    box-sizing: border-box;
+}
+
+.joystick-container {
+    background: #1e1e24;
+    padding: 30px;
+    border-radius: 50%;
+    box-shadow: inset 0 4px 10px rgba(0,0,0,0.5), 0 10px 20px rgba(0,0,0,0.3);
+}
+
+/* Handbrake Button */
+.btn-handbrake {
+    width: 100%;
+    padding: 20px;
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    border-radius: 12px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s ease;
+}
+.btn-handbrake.engaged {
+    background-color: #ff3333;
+    color: #ffffff;
+    border: 2px solid #ffaaaa;
+    box-shadow: 0 0 20px rgba(255,51,51,0.4);
+}
+.btn-handbrake.released {
+    background-color: #2a2a2a;
+    color: #888888;
+    border: 2px solid #444;
+    box-shadow: none;
+}
+
+.battery-wrapper {
+    display: flex;
+    justify-content: flex-end;
+}
+.battery-indicator {
+    padding: 15px 30px;
+    background: #1e1e24;
+    font-family: monospace;
+    font-size: 32px; 
+    font-weight: bold;
+    border-radius: 8px;
+    border: 1px solid #333;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+.battery-label { font-size: 16px; color: #888; } 
+.battery-good { color: #4ade80; }
+.battery-low { color: #ff6961; }
+
+/* PID Controls */
+.pid-header {
+    margin-top: 0;
+    margin-bottom: 25px;
+    color: #a0a0a0;
+    text-align: center;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+.pid-controls-wrapper {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+}
+.pid-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+}
+.pid-label {
+    font-weight: bold;
+    color: #ccc;
+    font-size: 16px;
+}
+.pid-slider {
+    -webkit-appearance: slider-vertical;
+    appearance: slider-vertical;
+    width: 8px;
+    height: 160px;
+    accent-color: #007bff;
+    cursor: pointer;
+}
+.pid-input {
+    width: 60px;
+    padding: 8px 5px;
+    background: #111;
+    color: #fff;
+    border: 1px solid #444;
+    border-radius: 4px;
+    text-align: center;
+    font-family: monospace;
+    font-size: 14px;
+}
+
+/* Chart Specific Styles */
+.chart-card {
+    padding: 15px;
+}
+.chart-title {
+    margin: 0 0 15px 0;
+    text-align: center;
+    color: #a0a0a0;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 12px;
+}
