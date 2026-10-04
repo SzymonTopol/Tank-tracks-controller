@@ -1,56 +1,72 @@
 # Full-Stack RC Tank Controller
 
-A high-performance, low-latency RC tank control system featuring a React frontend, a Spring Boot Java backend, and custom C++ ESP32 firmware. Designed with hardware safety and precise maneuverability in mind, this project implements real-time WebSocket telemetry, dual gamepad control schemes, and a custom PID-based slew rate limiter for smooth motor acceleration.
+This repository represents my all-in-one high-performance, low-latency RC tank control system. It consists of C++ ESP32 firmware (with adjacent connection schematics), a Spring Boot Java backend and a React frontend, packaged neatly in a Docker container. I built this project from the ground up without basing it on any other solution. I designed the system with low-latency in mind (which is done by the custom UDP protocol). The project implements a real-time WebSocket telemetry as well as 4 different types of tank movement tied together via the frontend (2 gamepad types, WSAD, joystick/mouse).
 
-## 🏗️ Architecture & Stack
+## 🏗️ Repository Layers
 
-The repository is divided into three distinct layers, each handling a specific domain of the controller's operation:
+The repository consists of 3 distinct layers, that determine the work of the controller:
 
-* **`frontend/` (React + Vite):** The operator dashboard. Renders real-time telemetry charts (via Recharts), battery status, and PID configuration sliders. It polls the Gamepad API and normalizes WSAD/Joystick inputs into differential track power commands.
-* **`backend/` (Java Spring Boot):** The network bridge. It exposes a REST API for configuration and a WebSocket server (`/ws/tank`) for the frontend. It features a dedicated asynchronous UDP listener thread that processes high-frequency telemetry without blocking or choking the main application runtime.
-* **`firmware/` (ESP32 C++ via PlatformIO):** The physical execution layer. It hosts its own Wi-Fi Access Point (`RC_Tank_Network`), parses incoming network commands, and drives the motors. It persists tuned PID configurations to non-volatile memory so settings survive power cycles. A custom `PID` class acts as a slew rate limiter, converting instant power demands into smooth exponential acceleration curves to prevent track slippage.
+* **`frontend/` (React + Vite):** Operating panel. Generates telemetry charts in real time (using Recharts), battery charge status and control sliders for configuring PID. It reads Gamepad API and normalizes the input signals from the keyboard (WSAD) or the joystick to send differential track control commands.
+* **`backend/` (Java Spring Boot):** Network bridge. It shares the REST API interface to the configuration and a WebSocket server (`/ws/tank`) for the frontend. Backend uses a dedicated asynchronous thread listening for the UDP packets, which translates them into the high-frequency telemetry, without blocking or slowing down the main application thread. 
+* **`firmware/` (ESP32 C++ via PlatformIO):** The execution layer on the hardware level. It creates its own Wi-Fi Access Point (`RC_Tank_Network`), translates incoming network commands and operates the DC motors. It also saves the set PID parameters in the non-volatile memory, which allows the settings to be persistent even after turning off power. A custom `PID` class serves as a slew-rate limiter, transforming the sudden power demands into smooth, exponential acceleration curves that prevent track slippage.
 
-## 📡 Dual-Protocol Networking Concept
+## 📡 Two protocols networking concept
 
-To balance speed and reliability, the system isolates data streams by urgency:
+Data streams, based on how important they are at the given moment, are split into two protocols: `UDP` and `HTTP REST`.
 
-* **UDP (High-Frequency Control & Telemetry):** Motor commands from the frontend and 50Hz telemetry updates from the tank are packed into custom, tightly packed byte arrays (`PacketCodec`). Despite the focus on speed, payloads undergo strict size and packet ID validation on both ends before execution to discard corrupted data. UDP ensures the tank reacts instantly to inputs and never chokes on outdated telemetry if packets drop.
-* **HTTP REST (Configuration & State):** Critical, low-frequency operations-like updating PID tuning parameters or triggering an emergency halt-use standard HTTP GET/POST endpoints. This guarantees delivery and allows the ESP32 to validate the configuration before applying it.
+* **UDP (High-Frequency Control & Telemetry)** guarantees that the tank reacts to the movement commands instantly, and ensures the telemetry data is up to date for the charts to draw.
+
+  This is because the engine commands sent from the frontend and the telemetry updates from the tank (in the 20ms time window) are packaged in compact byte arrays (`PacketCodec`). Despite heavy focus on speed, packets are strictly validated for size and ID on both sides (sending and receiving) before usage to avoid unwanted data.
+* **HTTP REST (Configuration & State)** is responsible for critical low-frequency operations - such as updating the PID parameters, or triggering the emergency brake.
+
+  They use standard API endpoints HTTP GET/POST, guaranteeing delivery and allowing validation from the ESP32 microcontroller before its implementation.
 
 ## 🔌 Hardware & Circuit Diagram
 
 ![Circuit Diagram](firmware/Circuit%20diagram.png)
 
-The physical build relies on standard, reliable maker components wired for safety and logic isolation:
+* The tank's brain is an **ESP32 Microcontroller**, responsible for managing the Wi-Fi Access Point, receiving and sending UDP packets and generating PWM signals for the DC motors.  
 
-* **ESP32 Microcontroller:** The brain of the tank, handling the AP, UDP reception, and motor PWM generation.
+* **L298N Motor Driver** is used for powering and steering the DC motors for both left and right tracks.
 
+* Two 4-channel bi-directional level shifters safely bridge the 3.3V ESP32 logic signals to the 5V L298N inputs, minimizing the risk of reverse voltage flow.
 
-* **L298N Motor Driver:** Controls the high-current DC motors for the left and right tracks.
+* Direct voltage from the battery is lowered by **LM2596 Buck Converter** to safely power the logic components.
 
+* **Voltage Divider (100kΩ / 10kΩ)** scales down the raw battery voltage to a safe 0-3.3V range for the ESP32's ADC pin (AN_READ_PIN), allowing the system to track the battery percentage (which can be later displayed on the frontend).
 
-* **Logic Level Converters:** Two 4-channel bi-directional level shifters safely bridge the 3.3V ESP32 logic signals to the 5V L298N inputs.
+## 🚀 Getting Started
 
+The easiest way to run the frontend and backend is by using Docker. Both environments can be started with a single command using Docker Compose. However, the firmware must first be manually uploaded to the ESP32.
 
-* **LM2596 Buck Converter:** Steps down the raw battery voltage to safely power the logic components.
+### Quick Start (Docker Compose)
 
+Prerequisites: Docker and Docker Compose installed on the host machine.
 
-* **Voltage Divider (100kΩ / 10kΩ):** Scales down the raw battery voltage to a safe 0-3.3V range for the ESP32's ADC pin (AN_READ_PIN), allowing the frontend to display real-time battery percentage.
+1. Prepare the ESP32 hardware and connect to its Wi-Fi network (see **1. Firmware (ESP32)** below for detailed steps).
+2. From the root of the repository, start the containers by running:
 
+```bash
+docker compose up --build
 
+```
 
-## 🚀 Getting Started (Local Development)
+3. Open a web browser and navigate to `http://localhost:5173` to access the control panel.
 
-To run the system locally, you will need to start all three layers.
+---
+
+### Manual Setup (Local Development)
+
+To run the system locally, all three layers must be started.
 
 ### 1. Firmware (ESP32)
 
 1. Open the `firmware` folder in VS Code with the **PlatformIO** extension installed.
 
 
-2. Connect your ESP32 via USB.
+2. Connect the ESP32 via USB.
 3. Build and upload the project using the PlatformIO toolbar.
-4. Once booted, the ESP32 will broadcast a standalone Wi-Fi Access Point (`RC_Tank_Network`). Connect your computer directly to this network (the password is defined in `Config.h`).
+4. Once booted, the ESP32 will broadcast a standalone Wi-Fi Access Point (`RC_Tank_Network`). Connect the computer directly to this network (the password is defined in `Config.h`).
 
 ### 2. Backend (Java Spring Boot)
 
@@ -95,18 +111,20 @@ npm run dev
 ```
 
 
-3. Open your browser to the URL provided by Vite (usually `http://localhost:5173`).
+3. Open the browser to the URL provided by Vite (usually `http://localhost:5173`).
 
-## 🎮 Controls & Hardware Safety
+## 🎮 Controls
 
-The frontend dynamically switches between input methods based on physical interaction.
+Depending on the chosen interaction method, the user can choose from 4 control methods.
 
-* **Keyboard:** `W` `A` `S` `D` for standard differential driving.
+The frontend dynamically switches between input methods based on physical interaction:
+
+* **Keyboard:** `W` `S` `A` `D` for standard differential driving.
 * **On-Screen Joystick:** Click and drag for precise vector control.
 * **Gamepad (NFS Mode):** Press `D-Pad UP` to activate. Uses the left stick for steering and triggers (L2/R2) for throttle and brake/reverse.
 * **Gamepad (Tank Mode):** Press `D-Pad DOWN` to activate. Uses the left and right triggers to independently control the speed of the left and right tracks, with bumpers (L1/R1) toggling reverse direction.
 
 ### Automated & Manual Safety Overrides
 
-* **Emergency Halt:** A dedicated HALT button in the UI immediately zero-outs the PID memory and cuts motor power. This state is authoritative and maintained on the ESP32-meaning the tank stays safely locked down even if the frontend client disconnects or refreshes.
+* **Emergency Halt:** A dedicated HALT button in the UI immediately wipes the PID memory and cuts motor power. This state is authoritative and maintained on the ESP32 - meaning the tank stays safely locked down even if the frontend client disconnects or refreshes.
 * **Dead-Man Switch:** The ESP32 firmware includes a watchdog deadline timer. If the microcontroller stops receiving valid UDP movement commands within a specified time threshold (e.g., the controller disconnects or the Java backend crashes), the tank will automatically trigger a self-halt to prevent a runaway vehicle.
