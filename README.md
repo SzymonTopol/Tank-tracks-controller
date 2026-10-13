@@ -2,6 +2,8 @@
 
 This repository represents my all-in-one high-performance, low-latency RC tank control system. It consists of C++ ESP32 firmware (with adjacent connection schematics), a Spring Boot Java backend and a React frontend, packaged neatly in a Docker container. I built this project from the ground up without basing it on any other solution. I designed the system with low-latency in mind (which is done by the custom UDP protocol). The project implements a real-time WebSocket telemetry as well as 4 different types of tank movement tied together via the frontend (2 gamepad types, WSAD, joystick/mouse).
 
+<video src="Tank_controlls.mp4?raw=true" autoplay loop muted playsinline></video>
+
 ## 🏗️ Repository Layers
 
 The repository consists of 3 distinct layers, that determine the work of the controller:
