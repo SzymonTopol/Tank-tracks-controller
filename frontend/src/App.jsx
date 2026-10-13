@@ -36,8 +36,10 @@ function App() {
   }, []);
 
   useEffect(() => {
+  if (localPid.clamp === 0 && tankState) {
     setLocalPid(tankState);
-  }, [tankState]);
+  }
+}, [tankState]);
 
   const handleMove = ({ x, y }) => {
     const { left, right } = calculateDifferentialPower(x, y);
@@ -47,13 +49,14 @@ function App() {
   const handleStop = () => updateMotors(0, 0, CONTROL_SOURCES.JOYSTICK);
 
   const applyPid = () => {
-    updatePidParams({
-      k: Number(localPid.k),
-      T_i: Number(localPid.T_i),
-      T_d: Number(localPid.T_d),
-      clamp: Number(localPid.clamp)
-    });
-  };
+  updatePidParams({
+    k: Number(localPid.k),
+    T_i: Number(localPid.T_i),
+    T_d: Number(localPid.T_d),
+    clamp: Number(localPid.clamp),
+    isHalt: Boolean(localPid.isHalt || false)
+  });
+};
 
   const updatePidValue = (propName, value) => {
     setLocalPid(prev => ({ ...prev, [propName]: value }));
@@ -62,7 +65,6 @@ function App() {
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') {
       applyPid();
-      e.target.blur();
     }
   };
 
